@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Expense Comparison</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <button class="menu-toggle" onclick="toggleMenu()">☰</button>
+        <img src="logo.png" alt="Expense Tracker Logo" class="logo">
+        <div class="user-info">
+            <span>Welcome, User</span>
+            <img src="user-icon.png" alt="User Icon" class="user-icon">
+        </div>
+    </header>
+
+    <!-- Sidebar Navigation -->
+    <div class="sidebar">
+        <ul>
+            <li><a href="index.html">📊 Dashboard</a></li>
+            <li><a href="budget.html">💰 Budget Setup</a></li>
+            <li><a href="expenses.html">📝 Expenses</a></li>
+            <li><a href="comparison.html">📈 Comparison</a></li>
+        </ul>
+    </div>
+
+    <!-- Overlay -->
+    <div class="overlay" onclick="toggleMenu()"></div>
+
+    <!-- Main Content -->
+    <div class="content">
+        <h2>Monthly Expense Comparison</h2>
+        <canvas id="comparisonChart"></canvas>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            renderComparisonChart();
+        });
+
+        function renderComparisonChart() {
+            let ctx = document.getElementById("comparisonChart").getContext("2d");
+            let budgets = JSON.parse(localStorage.getItem("budgets")) || {};
+            let expenses = JSON.parse(localStorage.getItem("expenses")) || [];
+
+            let expenseByMonth = {};
+            expenses.forEach(expense => {
+                let date = new Date(expense.date);
+                let month = date.getMonth() + 1;
+                expenseByMonth[month] = (expenseByMonth[month] || 0) + expense.amount;
+            });
+
+            let months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+            let labels = [];
+            let budgetData = [];
+            let expenseData = [];
+
+            for (let i = 1; i <= 12; i++) {
+                labels.push(months[i - 1]);
+                budgetData.push(budgets[i] || 0);
+                expenseData.push(expenseByMonth[i] || 0);
+            }
+
+            new Chart(ctx, {
+                type: "bar",
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: "Budget",
+                            data: budgetData,
+                            backgroundColor: "#36a2eb"
+                        },
+                        {
+                            label: "Expenses",
+                            data: expenseData,
+                            backgroundColor: "#ff6384"
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>

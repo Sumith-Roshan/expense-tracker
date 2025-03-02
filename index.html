@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+<!-- Header -->
+<header>
+    <button class="menu-toggle" onclick="toggleMenu()">☰</button>
+    <img src="logo.png" alt="Expense Tracker Logo" class="logo">
+    <div class="user-info">
+        <span>Welcome, User</span>
+        <img src="user-icon.png" alt="User Icon" class="user-icon">
+    </div>
+</header>
+
+<!-- Sidebar Navigation -->
+<div class="sidebar">
+    <ul>
+        <li><a href="index.html" class="active">📊 Dashboard</a></li>
+        <li><a href="budget.html">💰 Budget Setup</a></li>
+        <li><a href="expenses.html">📝 Expenses</a></li>
+        <li><a href="comparison.html">📈 Comparison</a></li>
+    </ul>
+</div>
+
+<!-- Overlay -->
+<div class="overlay" onclick="toggleMenu()"></div>
+
+<!-- Main Content -->
+<div class="content">
+    <h1>Dashboard</h1>
+
+    <!-- Month Selection -->
+    <label for="monthSelect">Select Month:</label>
+    <select id="monthSelect" class="dashboard-dropdown" onchange="updateDashboard()"></select>
+
+    <!-- Summary Section -->
+    <div class="summary-container">
+        <div class="summary-card">
+            <span class="summary-icon">💰</span>
+            <p>Total Budget</p>
+            <span class="amount"><span id="budgetAmount">0</span></span>
+        </div>
+        <div class="summary-card">
+            <span class="summary-icon">💸</span>
+            <p>Total Expenses</p>
+            <span class="amount"><span id="totalExpenses">0</span></span>
+        </div>
+        <div class="summary-card">
+            <span class="summary-icon">🛡️</span>
+            <p>Remaining Balance</p>
+            <span class="amount"><span id="remainingBudget">0</span></span>
+        </div>
+    </div>
+
+    <!-- Charts Section -->
+    <div class="chart-wrapper">
+        <div class="chart-container">
+            <h2>Day-wise Accumulated Expenses</h2>
+            <canvas id="expenseLineChart"></canvas>
+        </div>
+        <div class="chart-container">
+            <h2>Category-Wise Expense Distribution</h2>
+            <canvas id="expensePieChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript -->
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        populateMonths();
+        updateDashboard();
+    });
+
+    // Populate month dropdown
+    function populateMonths() {
+        let monthSelect = document.getElementById("monthSelect");
+        let months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+        
+        months.forEach((month, index) => {
+            let option = document.createElement("option");
+            option.value = index + 1;
+            option.textContent = month;
+            monthSelect.appendChild(option);
+        });
+
+        let currentMonth = new Date().getMonth() + 1;
+        monthSelect.value = currentMonth;
+    }
+
+    // Update dashboard based on selected month
+    function updateDashboard() {
+        let selectedMonth = document.getElementById("monthSelect").value;
+        let budgets = JSON.parse(localStorage.getItem("budgets")) || {};
+        let expenses = JSON.parse(localStorage.getItem("expenses")) || [];
+
+        let budget = budgets[selectedMonth] || 0;
+        let filteredExpenses = expenses.filter(exp => new Date(exp.date).getMonth() + 1 == selectedMonth);
+        let totalExpenses = filteredExpenses.reduce((sum, exp) => sum + exp.amount, 0);
+        let remainingBudget = budget - totalExpenses;
+
+        document.getElementById("budgetAmount").textContent = `$${budget}`;
+        document.getElementById("totalExpenses").textContent = `$${totalExpenses}`;
+        document.getElementById("remainingBudget").textContent = `$${remainingBudget}`;
+
+        renderPieChart(filteredExpenses);
+        renderLineChart(filteredExpenses, budget);
+    }
+
+    // Render category-wise pie chart
+    function renderPieChart(expenses) {
+        let ctx = document.getElementById("expensePieChart").getContext("2d");
+
+        if (window.expensePieChartInstance) {
+            window.expensePieChartInstance.destroy();
+        }
+
+        let categories = {};
+        expenses.forEach(exp => {
+            categories[exp.category] = (categories[exp.category] || 0) + exp.amount;
+        });
+
+        window.expensePieChartInstance = new Chart(ctx, {
+            type: "pie",
+            data: {
+                labels: Object.keys(categories),
+                datasets: [{
+                    data: Object.values(categories),
+                    backgroundColor: ["#ff6384", "#36a2eb", "#ffce56", "#4bc0c0"]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        });
+    }
+
+    // Render day-wise accumulated expense line chart
+    function renderLineChart(expenses, budget) {
+        let ctx = document.getElementById("expenseLineChart").getContext("2d");
+
+        if (window.expenseLineChartInstance) {
+            window.expenseLineChartInstance.destroy();
+        }
+
+        let dailyExpenses = {};
+        let cumulativeTotal = 0;
+        let labels = [];
+        let expenseData = [];
+
+        let currentMonth = document.getElementById("monthSelect").value;
+        let daysInMonth = new Date(new Date().getFullYear(), currentMonth, 0).getDate();
+
+        for (let i = 1; i <= daysInMonth; i++) {
+            labels.push(`Day ${i}`);
+            dailyExpenses[i] = 0;
+        }
+
+        expenses.forEach(exp => {
+            let date = new Date(exp.date);
+            let day = date.getDate();
+            dailyExpenses[day] += exp.amount;
+        });
+
+        for (let i = 1; i <= daysInMonth; i++) {
+            cumulativeTotal += dailyExpenses[i];
+            expenseData.push(cumulativeTotal);
+        }
+
+        let budgetLine = Array(daysInMonth).fill(budget);
+
+        window.expenseLineChartInstance = new Chart(ctx, {
+            type: "line",
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: "Cumulative Expenses",
+                        data: expenseData,
+                        borderColor: "#ff6384",
+                        backgroundColor: "rgba(255, 99, 132, 0.2)",
+                        fill: true
+                    },
+                    {
+                        label: "Budget",
+                        data: budgetLine,
+                        borderColor: "#36a2eb",
+                        borderDash: [5, 5]
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: true }
+                }
+            }
+        });
+    }
+
+    // Toggle Sidebar
+    function toggleMenu() {
+        document.querySelector(".sidebar").classList.toggle("open");
+        document.querySelector(".overlay").classList.toggle("active");
+    }
+</script>
+
+</body>
+</html>

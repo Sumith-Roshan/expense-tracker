@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Expenses</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Header -->
+  <header>
+    <button class="menu-toggle" onclick="toggleMenu()">☰</button>
+    <img src="logo.png" alt="Expense Tracker Logo" class="logo">
+    <div class="user-info">
+        <span>Welcome, User</span>
+        <img src="user-icon.png" alt="User Icon" class="user-icon">
+    </div>
+</header>
+
+<!-- Sidebar Navigation -->
+<div class="sidebar">
+    <ul>
+        <li><a href="index.html">📊 Dashboard</a></li>
+        <li><a href="budget.html">💰 Budget Setup</a></li>
+        <li><a href="expenses.html">📝 Expenses</a></li>
+        <li><a href="comparison.html">📈 Comparison</a></li>
+    </ul>
+</div>
+
+<!-- Overlay -->
+<div class="overlay" onclick="toggleMenu()"></div>
+
+<!-- JavaScript for Sidebar Toggle -->
+<script>
+    function toggleMenu() {
+        document.querySelector(".sidebar").classList.toggle("open");
+        document.querySelector(".content").classList.toggle("expanded");
+    }
+</script>
+
+
+    <!-- Main Content -->
+    <div class="content">
+
+        <div class="expenses-container">
+            <h2>Add Expense</h2>
+            <div class="expense-form">
+                <input type="text" id="expenseName" placeholder="Expense Name">
+                <input type="number" id="expenseAmount" placeholder="Amount">
+                <input type="date" id="expenseDate"> <!-- Date Input -->
+                <select id="expenseCategory" class="expenseCategory">
+                    <option value="Food">Food</option>
+                    <option value="Transport">Transport</option>
+                    <option value="Entertainment">Entertainment</option>
+                    <option value="Other">Other</option>
+                </select>
+                <button onclick="addExpense()">Add Expense</button>
+            </div>
+        
+            <h2>Transactions</h2>
+            <div class="transactions-table">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Amount</th>
+                            <th>Date</th>
+                            <th>Category</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="expenseList"></tbody>
+                </table>
+            </div>
+        </div>
+        
+
+        <div class="import-export-container">
+            <button class="export-btn" onclick="exportCSV()">Export CSV</button>
+            <label for="importCSV" class="import-label">Import CSV</label>
+            <input type="file" id="importCSV" accept=".csv" onchange="importCSV(event)">
+        </div>
+        
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", loadExpenses);
+
+        let expenses = JSON.parse(localStorage.getItem("expenses")) || [];
+
+        function addExpense() {
+    let nameField = document.getElementById("expenseName");
+    let amountField = document.getElementById("expenseAmount");
+    let categoryField = document.getElementById("expenseCategory");
+    let dateField = document.getElementById("expenseDate");
+
+    let name = nameField.value;
+    let amount = parseFloat(amountField.value);
+    let category = categoryField.value;
+    let date = dateField.value; // Get the date
+
+    if (name && amount && date) {
+        let expense = { name, amount, category, date };
+        expenses.push(expense);
+        localStorage.setItem("expenses", JSON.stringify(expenses));
+        loadExpenses();
+
+        // Clear the form fields
+        nameField.value = "";
+        amountField.value = "";
+        categoryField.selectedIndex = 0; // Reset dropdown
+        dateField.value = "";
+    }
+}
+
+
+function loadExpenses() {
+    let list = document.getElementById("expenseList");
+    list.innerHTML = "";
+    expenses.forEach((expense, index) => {
+        let formattedDate = new Date(expense.date).toLocaleDateString(); // Format the date
+        let row = `<tr>
+            <td>${expense.name}</td>
+            <td>$${expense.amount.toFixed(2)}</td>
+            <td>${expense.category}</td>
+            <td>${formattedDate}</td>
+            <td><button onclick="deleteExpense(${index})">Delete</button></td>
+        </tr>`;
+        list.innerHTML += row;
+    });
+}
+
+
+        function deleteExpense(index) {
+            expenses.splice(index, 1);
+            localStorage.setItem("expenses", JSON.stringify(expenses));
+            loadExpenses();
+        }
+
+        function exportCSV() {
+            let csvContent = "data:text/csv;charset=utf-8,Name,Amount,Category\n" + 
+                expenses.map(e => `${e.name},${e.amount},${e.category}`).join("\n");
+
+            let encodedUri = encodeURI(csvContent);
+            let link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "expenses.csv");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function importCSV(event) {
+            let file = event.target.files[0];
+            if (!file) return;
+
+            let reader = new FileReader();
+            reader.onload = function(e) {
+                let lines = e.target.result.split("\n").slice(1);
+                lines.forEach(line => {
+                    let [name, amount, category] = line.split(",");
+                    if (name && amount && category) {
+                        expenses.push({ name, amount: parseFloat(amount), category });
+                    }
+                });
+                localStorage.setItem("expenses", JSON.stringify(expenses));
+                loadExpenses();
+            };
+            reader.readAsText(file);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Budget Setup</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <button class="menu-toggle" onclick="toggleMenu()">☰</button>
+        <img src="logo.png" alt="Expense Tracker Logo" class="logo">
+        <div class="user-info">
+            <span>Welcome, User</span>
+            <img src="user-icon.png" alt="User Icon" class="user-icon">
+        </div>
+    </header>
+
+    <!-- Sidebar Navigation -->
+    <div class="sidebar">
+        <ul>
+            <li><a href="index.html">📊 Dashboard</a></li>
+            <li><a href="budget.html">💰 Budget Setup</a></li>
+            <li><a href="expenses.html">📝 Expenses</a></li>
+            <li><a href="comparison.html">📈 Comparison</a></li>
+        </ul>
+    </div>
+
+    <!-- Overlay -->
+    <div class="overlay" onclick="toggleMenu()"></div>
+
+    <!-- Main Content -->
+    <div class="content">
+        <h2>Set your Monthly Budget</h2>
+        <div class="budget-form">
+            <label for="monthSelect">Select Month:</label>
+            <select id="monthSelect"></select>
+            
+            <label for="budgetInput">Monthly Budget:</label>
+            <input type="number" id="budgetInput" placeholder="Enter your budget">
+            <button class="set-budget-btn" onclick="setBudget()">Set Budget</button>
+        </div>
+        <p id="budgetAlert"></p>
+
+        <!-- Budget List Grid -->
+        <h3>Configured Budgets</h3>
+        <table class="budget-grid">
+            <thead>
+                <tr>
+                    <th>Month</th>
+                    <th>Budget Amount</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="budgetList"></tbody>
+        </table>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            populateMonths();
+            loadBudgets();
+        });
+
+        function populateMonths() {
+            let monthSelect = document.getElementById("monthSelect");
+            let months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+            
+            months.forEach((month, index) => {
+                let option = document.createElement("option");
+                option.value = index + 1;
+                option.textContent = month;
+                monthSelect.appendChild(option);
+            });
+
+            let currentMonth = new Date().getMonth() + 1;
+            monthSelect.value = currentMonth;
+        }
+
+        function setBudget() {
+            let month = document.getElementById("monthSelect").value;
+            let budgetInput = document.getElementById("budgetInput");
+            let budget = parseFloat(budgetInput.value);
+
+            if (!isNaN(budget) && budget > 0) {
+                let budgets = JSON.parse(localStorage.getItem("budgets")) || {};
+                budgets[month] = budget;
+                localStorage.setItem("budgets", JSON.stringify(budgets));
+                
+                document.getElementById("budgetAlert").textContent = `Budget set: $${budget}`;
+                document.getElementById("budgetAlert").style.color = "green";
+
+                budgetInput.value = "";
+                loadBudgets();
+            } else {
+                document.getElementById("budgetAlert").textContent = "Please enter a valid budget amount.";
+                document.getElementById("budgetAlert").style.color = "red";
+            }
+        }
+
+        function loadBudgets() {
+            let budgetList = document.getElementById("budgetList");
+            budgetList.innerHTML = "";
+            let budgets = JSON.parse(localStorage.getItem("budgets")) || {};
+            
+            Object.keys(budgets).forEach(month => {
+                let row = document.createElement("tr");
+                row.innerHTML = `
+                    <td>${new Date(2022, month - 1).toLocaleString('default', { month: 'long' })}</td>
+                    <td>$${budgets[month]}</td>
+                    <td><button class="delete-btn" onclick="deleteBudget(${month})">Delete</button></td>
+                `;
+                budgetList.appendChild(row);
+            });
+        }
+        function deleteBudget(month) {
+            let budgets = JSON.parse(localStorage.getItem("budgets")) || {};
+            delete budgets[month];
+            localStorage.setItem("budgets", JSON.stringify(budgets));
+            loadBudgets();
+        }
+    </script>
+</body>
+</html>
