@@ -120,6 +120,10 @@
             localStorage.setItem("budgets", JSON.stringify(budgets));
             loadBudgets();
         }
+        function toggleMenu() {
+        document.querySelector(".sidebar").classList.toggle("open");
+        document.querySelector(".overlay").classList.toggle("active");
+    }
     </script>
 </body>
 </html>
